@@ -1,16 +1,17 @@
 import argparse,os,scipy
 import numpy as np
 import scipy.signal
-import matplotlib.pyplot as plt
-from skimage import io,exposure
+#import matplotlib.pyplot as plt
+from skimage import io,exposure,color
 from skimage.draw import circle,ellipse
 
 def trisect(image):
     # Use the mean value of each pixel row to perform auto-correlation and find the repeated plate edge
     print("Trisecting image")
+    image_gray = color.rgb2gray(image)
     
-    h,w = image.shape
-    rowMeans = [np.mean(image[i,:]) for i in range(0,h)]
+    h,w = image_gray.shape
+    rowMeans = [np.mean(image_gray[i,:]) for i in range(0,h)]
 
     # Treat the rowMeans as a signal
     # Use the fast fourier transform and auto-correlate to find repeats
@@ -25,9 +26,10 @@ def trisect(image):
     return(images)
 
 def cropImage(image,blank):
+    image_gray = color.rgb2gray(image)
     if blank is not None:
         # If a blank is provided, use that to crop the image to the plate
-        xcor = crossCorrelate(image,blank)
+        xcor = crossCorrelate(image_gray,blank)
         offset = np.where(xcor == xcor.max())
         h,w = blank.shape
         L = offset[1][0]
@@ -36,9 +38,9 @@ def cropImage(image,blank):
         B = offset[0][0]+h
     else:
         # Plate edge detection; performance highly dependent on lighting and plate type
-        h,w = image.shape
-        rowMeans = [np.mean(image[i,:]) for i in range(0,h)]
-        colMeans = [np.mean(image[:,i]) for i in range(0,w)]
+        h,w = image_gray.shape
+        rowMeans = [np.mean(image_gray[i,:]) for i in range(0,h)]
+        colMeans = [np.mean(image_gray[:,i]) for i in range(0,w)]
         
         # Smooth curves
         rowMeans = scipy.signal.savgol_filter(rowMeans,int(h/15)+1-int(h/15)%2,3)
@@ -55,7 +57,7 @@ def cropImage(image,blank):
     print("{}:{} left to right".format(L,R))
     print("{}:{} top to bottom".format(T,B))
     
-    return(image[T:B,L:R])
+    return(image[T:B,L:R,:])
         
 def crossCorrelate(a,b,boundary=None):
     #Perform a normalized cross-correlation of two arrays
@@ -68,19 +70,20 @@ def crossCorrelate(a,b,boundary=None):
     
     return(xcor)
     
-def findGrid(plate,nrows,ncols,layout,r,xGap,yGap,pad):
+def findGrid(plate,nrows,ncols,layout,r,rmax,xGap,yGap,pad):
     #Make an array of spots to use as a mask, cross-correlate with the plate image and find the best-fitting grid points
     print("  Finding colonies")
     
-    mask = -np.ones((round((2*pad)+((nrows-1)*yGap)),round((2*pad)+((ncols-1)*xGap))))
+    plate_gray = color.rgb2gray(plate)
+    mask = -np.ones((int(np.ceil((2*(pad+rmax))+((nrows-1)*yGap))),int(np.ceil((2*(pad+rmax))+((ncols-1)*xGap)))))
     for y in range(0,nrows):
         for x in range(0,ncols):
             if layout[y,x]:
-                mask[circle(pad+round(y*yGap),pad+round(x*xGap),r)] = 1
+                mask[circle(pad+rmax+np.floor(y*yGap),pad+rmax+np.floor(x*xGap),r)] = 1
 
-    xcor = crossCorrelate(plate,mask)
+    xcor = crossCorrelate(plate_gray,mask)
     offset = np.where(xcor == xcor.max())
-    offset = np.array((offset[0][0]+pad,offset[1][0]+pad))
+    offset = np.array((offset[0][0]+pad+rmax,offset[1][0]+pad+rmax))
     
     rowIndex = np.array([round(offset[0]+(y*yGap)) for y in range(0,nrows)],dtype=np.int32)
     colIndex = np.array([round(offset[1]+(x*xGap)) for x in range(0,ncols)],dtype=np.int32)
@@ -133,18 +136,19 @@ def wrapImage(image):
     
     return(wrapped)
 
-def findColony(cell,rmin,rmax):
+def findColony(cell,rmin,rmax,pad):
     #Find a colony by cross-correlation of ideal circular templates of different radii to create inside and outside regions
     
-    h,w = cell.shape
+    cell_gray = color.rgb2gray(cell)
+    h,w = cell_gray.shape
     
     offsets = []
     scores = []
     for r in np.arange(rmin,rmax,0.5):
         mask = -np.ones((h,w))
         mask[ellipse(int(h/2),int(w/2),r,r)] = 1
-        xcor = crossCorrelate(cell,mask,boundary='wrap')
-        offset = np.where(xcor==xcor[int(r):int(h)-int(r),int(r):int(w)-int(r)].max())
+        xcor = crossCorrelate(cell_gray,mask,boundary='wrap')
+        offset = np.where(xcor==xcor[int((xcor.shape[0]/2)-pad):int((xcor.shape[0]/2)+pad),int((xcor.shape[1]/2)-pad):int((xcor.shape[1]/2)+pad)].max())
         offset = (offset[0][0],offset[1][0])
         offsets.append(offset)
         scores.append(xcor.max())
@@ -154,54 +158,62 @@ def findColony(cell,rmin,rmax):
     offset = offsets[best]
     
     hili = np.copy(cell)
-    outside = np.ones(cell.shape,np.bool)
+    outside = np.ones(cell_gray.shape,np.bool)
     outside[ellipse(offset[0],offset[1],r,r)] = 0
-    hili[outside] = hili[outside]/2
+    for channel in range(0,3):
+        hili[:,:,channel][outside] = hili[:,:,channel][outside]/2
     return(offset[0],offset[1],r,max(scores),hili)
 
-def scoreColony(cell,r,offset):
+def scoreColony(cell,channel,r,offset):
     #Score a colony by summing the pixel array intensities after subtracting the mean intensity of the outside region
     
-    h,w = cell.shape
+    if channel == 3:
+        cell_single = color.rgb2gray(cell)
+    else:
+        cell_single = cell[:,:,channel]
+    h,w = cell_single.shape
     outside = np.ones((h,w),np.bool)
     outside[ellipse(offset[0],offset[1],r,r)] = 0    
-    
-    bg = np.mean(cell[outside])
-    fg = np.mean(cell[~outside])
-    bgvar = np.var(cell[outside])
-    fgvar = np.var(cell[~outside])
+
+    bg = np.mean(cell_single[outside])
+    fg = np.mean(cell_single[~outside])
+    bgvar = np.var(cell_single[outside])
+    fgvar = np.var(cell_single[~outside])
     return(bg,fg,bgvar,fgvar)
 
 def scoreGrowth(plate,rowIndex,colIndex,layout,rmin,rmax,pad):
-    #Find each cvarsolony within its cell, then score it according to brightness of pixels inside vs. outside the colony
+    #Find each colony within its cell, then score it according to brightness of pixels inside vs. outside the colony
     print("  Scoring growth")
     
     nrows = len(rowIndex)
     ncols = len(colIndex)
     
-    h,w = plate.shape
+    h,w,c = plate.shape
     hilighted = np.copy(plate)
     roffsets = np.zeros((nrows,ncols))
     coffsets = np.zeros((nrows,ncols))
     radii = np.zeros((nrows,ncols))
     ccscores = np.zeros((nrows,ncols))
-    bgs = np.zeros((nrows,ncols))
-    fgs = np.zeros((nrows,ncols))
-    bgvars = np.zeros((nrows,ncols))
-    fgvars = np.zeros((nrows,ncols))
+    
+    bgs = np.zeros((nrows,ncols,4))
+    fgs = np.zeros((nrows,ncols,4))
+    bgvars = np.zeros((nrows,ncols,4))
+    fgvars = np.zeros((nrows,ncols,4))
+
     for rid,row in enumerate(rowIndex):
         for cid,col in enumerate(colIndex):
             if layout[rid,cid]:
                 print("    Working on cell "+str(rid)+"x"+str(cid))
-                cell = plate[max(0,row-pad):min(h,row+pad),max(0,col-pad):min(w,col+pad)]
-                roffsets[rid,cid],coffsets[rid,cid],radii[rid,cid],ccscores[rid,cid],hili = findColony(cell,rmin,rmax)
-                bgs[rid,cid],fgs[rid,cid],bgvars[rid,cid],fgvars[rid,cid] = scoreColony(cell,radii[rid,cid],(roffsets[rid,cid],coffsets[rid,cid]))
-                hilighted[max(0,row-pad):min(h,row+pad),max(0,col-pad):min(w,col+pad)] = hili
+                cell = plate[max(0,row-pad-rmax):min(h,row+pad+rmax),max(0,col-pad-rmax):min(w,col+pad+rmax),:]
+                roffsets[rid,cid],coffsets[rid,cid],radii[rid,cid],ccscores[rid,cid],hili = findColony(cell,rmin,rmax,pad)
+                for channel in range(0,4):
+                    bgs[rid,cid,channel],fgs[rid,cid,channel],bgvars[rid,cid,channel],fgvars[rid,cid,channel] = scoreColony(cell,channel,radii[rid,cid],(roffsets[rid,cid],coffsets[rid,cid]))
+                hilighted[max(0,row-pad-rmax):min(h,row+pad+rmax),max(0,col-pad-rmax):min(w,col+pad+rmax),:] = hili
             
     return(hilighted,roffsets,coffsets,radii,ccscores,bgs,fgs,bgvars,fgvars)
 
 def formatResults(rowIndex,colIndex,layout,roffsets,coffsets,radii,ccscores,bgs,fgs,bgvars,fgvars):
-    results = np.empty(np.sum(layout),dtype=([('Strain','a3'),('Row','i8'),('Col','i8'),('PixelRow','i8'),('PixelCol','i8'),('Radius','f8'),('CCScore','f8'),('BgMean','f8'),('FgMean','f8'),('BgVar','f8'),('FgVar','f8')]))
+    results = np.empty(np.sum(layout),dtype=([('Strain','a3'),('Row','i8'),('Col','i8'),('PixelRow','i8'),('PixelCol','i8'),('Radius','f8'),('CCScore','f8'),('R_BgMean','f8'),('R_FgMean','f8'),('R_BgVar','f8'),('R_FgVar','f8'),('G_BgMean','f8'),('G_FgMean','f8'),('G_BgVar','f8'),('G_FgVar','f8'),('B_BgMean','f8'),('B_FgMean','f8'),('B_BgVar','f8'),('B_FgVar','f8'),('BgMean','f8'),('FgMean','f8'),('BgVar','f8'),('FgVar','f8')]))
     i = 0
     for row in range(0,len(rowIndex)):
         for col in range(0,len(colIndex)):
@@ -213,10 +225,22 @@ def formatResults(rowIndex,colIndex,layout,roffsets,coffsets,radii,ccscores,bgs,
                 results[i]['PixelCol'] = colIndex[col]+coffsets[row,col]
                 results[i]['Radius'] = radii[row,col]
                 results[i]['CCScore'] = ccscores[row,col]
-                results[i]['BgMean'] = bgs[row,col]
-                results[i]['FgMean'] = fgs[row,col]
-                results[i]['BgVar'] = bgvars[row,col]
-                results[i]['FgVar'] = fgvars[row,col]
+                results[i]['R_BgMean'] = bgs[row,col,0]
+                results[i]['R_FgMean'] = fgs[row,col,0]
+                results[i]['R_BgVar'] = bgvars[row,col,0]
+                results[i]['R_FgVar'] = fgvars[row,col,0]
+                results[i]['B_BgMean'] = bgs[row,col,1]
+                results[i]['B_FgMean'] = fgs[row,col,1]
+                results[i]['B_BgVar'] = bgvars[row,col,1]
+                results[i]['B_FgVar'] = fgvars[row,col,1]
+                results[i]['G_BgMean'] = bgs[row,col,2]
+                results[i]['G_FgMean'] = fgs[row,col,2]
+                results[i]['G_BgVar'] = bgvars[row,col,2]
+                results[i]['G_FgVar'] = fgvars[row,col,2]
+                results[i]['BgMean'] = bgs[row,col,3]
+                results[i]['FgMean'] = fgs[row,col,3]
+                results[i]['BgVar'] = bgvars[row,col,3]
+                results[i]['FgVar'] = fgvars[row,col,3]
                 i += 1
     return(results)
     
@@ -229,7 +253,8 @@ def outputResults(results,filename):
     fo.close()
 
 ### MAIN ###
-def __main__():
+if True:
+#def __main__():
     parser = argparse.ArgumentParser(description='Assessing colony growth on arrayed plates.')
     parser.add_argument('file',metavar='image_file',help='Image file of colonies arrayed on a plate(s)')
     parser.add_argument('-t','--three',action='store_true',help='Image contains three plates as repeats')
@@ -264,7 +289,7 @@ def __main__():
     if args.max_r is None:
         args.max_r = args.radius*2
 
-    #Get image name and path for output files
+    # Get image name and path for output files
     if args.output is None:
         args.output = os.path.splitext(args.file)[0]
 
@@ -275,13 +300,15 @@ def __main__():
         layout = np.ones((8,12))
     nrows,ncols = layout.shape
 
-    #Flip, invert, convert to grayscale and normalise levels to between 1% and 99%
-    image = io.imread(args.file,as_gray=True)
+    # Import image
+    image = io.imread(args.file)
+
     if args.scan:
         image = np.fliplr(1-image)
+    # Slight rescale to improve contrast
     p1,p99 = np.percentile(image,(1,99))
     image = exposure.rescale_intensity(image,(p1,p99))
-    h,w = image.shape
+    h,w,c = image.shape
 
     if args.three:
         plates = trisect(image)
@@ -292,14 +319,14 @@ def __main__():
         print("Plate "+str(pid+1)+":")
         cropped = cropImage(image,blank)
         io.imsave("{}_{}_cut.png".format(args.output,pid),cropped)
-        masked,rowIndex,colIndex = findGrid(cropped,nrows,ncols,layout,r=args.radius,xGap=args.xgap,yGap=args.ygap,pad=args.pad)
+        masked,rowIndex,colIndex = findGrid(cropped,nrows,ncols,layout,r=args.radius,rmax=args.max_r,xGap=args.xgap,yGap=args.ygap,pad=args.pad)
         io.imsave("{}_{}_mask.png".format(args.output,pid),masked)
         hilighted,roffsets,coffsets,radii,ccscores,bgs,fgs,bgvars,fgvars = scoreGrowth(cropped,rowIndex,colIndex,layout,rmin=args.min_r,rmax=args.max_r,pad=args.pad)
         io.imsave("{}_{}_hili.png".format(args.output,pid),hilighted)
         results = formatResults(rowIndex,colIndex,layout,roffsets,coffsets,radii,ccscores,bgs,fgs,bgvars,fgvars)
         outputResults(results,"{}_{}.txt".format(args.output,pid))
 
-    return()
+    #return()
 
-if __name__ == "__main__":
-    __main__()
+#if __name__ == "__main__":
+#    __main__()
