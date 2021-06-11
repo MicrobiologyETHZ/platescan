@@ -70,20 +70,22 @@ def crossCorrelate(a,b,boundary=None):
     
     return(xcor)
     
-def findGrid(plate,nrows,ncols,layout,r,rmax,xGap,yGap,pad):
+def findGrid(plate,nrows,ncols,layout,r,rmax,xGap,yGap,pad,edge):
     #Make an array of spots to use as a mask, cross-correlate with the plate image and find the best-fitting grid points
     print("  Finding colonies")
     
     plate_gray = color.rgb2gray(plate)
+    dim = plate_gray.shape
     mask = -np.ones((int(np.ceil((2*(pad+rmax))+((nrows-1)*yGap))),int(np.ceil((2*(pad+rmax))+((ncols-1)*xGap)))))
     for y in range(0,nrows):
         for x in range(0,ncols):
             if layout[y,x]:
                 mask[circle(pad+rmax+np.floor(y*yGap),pad+rmax+np.floor(x*xGap),r)] = 1
 
-    xcor = crossCorrelate(plate_gray,mask)
+    xcor = crossCorrelate(plate_gray[edge[0]:(dim[0]-edge[2]),edge[1]:(dim[1]-edge[3])],mask)
     offset = np.where(xcor == xcor.max())
-    offset = np.array((offset[0][0]+pad+rmax,offset[1][0]+pad+rmax))
+    offset = [offset[0][0]+edge[0],offset[1][0]+edge[1]]
+    offset = np.array((offset[0]+pad+rmax,offset[1]+pad+rmax))
     
     rowIndex = np.array([round(offset[0]+(y*yGap)) for y in range(0,nrows)],dtype=np.int32)
     colIndex = np.array([round(offset[1]+(x*xGap)) for x in range(0,ncols)],dtype=np.int32)
@@ -267,6 +269,7 @@ if True:
     parser.add_argument('-x','--xgap',metavar='xgap',help='Horizontal gap between colony centres in pixels',type=int)
     parser.add_argument('-y','--ygap',metavar='ygap',help='Vertical gap between colony centres in pixels',type=int)
     parser.add_argument('-p','--pad',metavar='pad',help='Area to search outside of colony centres in pixels',type=int)
+    parser.add_argument('-e','--edge',metavar='edge',nargs=4,help='Plate edge in pixels to be avoided in search (bottom, left, top, right)',type=int)
     parser.add_argument('-o','--output',metavar='output_prefix',help='Prefix for output files')
 
     args = parser.parse_args()
@@ -319,7 +322,7 @@ if True:
         print("Plate "+str(pid+1)+":")
         cropped = cropImage(image,blank)
         io.imsave("{}_{}_cut.png".format(args.output,pid),cropped)
-        masked,rowIndex,colIndex = findGrid(cropped,nrows,ncols,layout,r=args.radius,rmax=args.max_r,xGap=args.xgap,yGap=args.ygap,pad=args.pad)
+        masked,rowIndex,colIndex = findGrid(cropped,nrows,ncols,layout,r=args.radius,rmax=args.max_r,xGap=args.xgap,yGap=args.ygap,pad=args.pad,edge=args.edge)
         io.imsave("{}_{}_mask.png".format(args.output,pid),masked)
         hilighted,roffsets,coffsets,radii,ccscores,bgs,fgs,bgvars,fgvars = scoreGrowth(cropped,rowIndex,colIndex,layout,rmin=args.min_r,rmax=args.max_r,pad=args.pad)
         io.imsave("{}_{}_hili.png".format(args.output,pid),hilighted)
