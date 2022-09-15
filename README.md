@@ -1,9 +1,10 @@
 # platescan
-Software to quantify colony growth on arrayed plates
+Assessing colony growth on arrayed plates.
 
 ## How to use
 Assessing colony growth on arrayed plates.
 
+'''
 positional arguments:
   image_file            Image file of colonies arrayed on a plate(s)
 
@@ -27,6 +28,7 @@ optional arguments:
                         left, top, right)
   -o output_prefix, --output output_prefix
                         Prefix for output files
+'''
 
 ## Method
 The plate image is cropped as follows:
@@ -44,3 +46,16 @@ The program reports for each expected colony:
   - Colony radius
   - Cross-correlation score
   - Foreground (inside the circle) and background (outside) pixel intensity mean and variance in Red, Blue, Green and Greyscale
+
+## Example
+Starting with this image:
+![Image of bacterial colonies growing on a plate](examples/IMG_3402.JPG)
+
+The image is cut based on a blank:
+![Image of a blank plate](examples/blank.jpg) | ![Image of a cropped plate](examples/IMG_3402_0_cut.png)
+
+The colony grid is then found:
+![Image of a grid of circles over a plate of colonies](examples/IMG_3402_0_mask.png)
+
+Finally the best fit is found for each colony:
+![Image of a plate of colonies with each highlighted within a square cell](examples/IMG_3402_0_hili.png)
