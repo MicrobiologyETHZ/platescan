@@ -255,8 +255,8 @@ def outputResults(results,filename):
     fo.close()
 
 ### MAIN ###
-if True:
-#def __main__():
+#if True:
+def __main__():
     parser = argparse.ArgumentParser(description='Assessing colony growth on arrayed plates.')
     parser.add_argument('file',metavar='image_file',help='Image file of colonies arrayed on a plate(s)')
     parser.add_argument('-t','--three',action='store_true',help='Image contains three plates as repeats')
@@ -331,5 +331,5 @@ if True:
 
     #return()
 
-#if __name__ == "__main__":
-#    __main__()
+if __name__ == "__main__":
+    __main__()
