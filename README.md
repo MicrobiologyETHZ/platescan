@@ -55,6 +55,7 @@ The script was run:
 `python platescan2.py examples/IMG_3413.JPG -l examples/layout.txt -b examples/blank.jpg -r 20 -x 110 -y 109 -p 10 --min_r 15 --max_r 40 --edge 200 40 200 40`
 
 The image is cut based on a blank:
+
 <img src="examples/blank.jpg" alt="Image of a blank plate" width=50% /> <img src="examples/IMG_3413_0_cut.png" alt="Image of a cropped plate" width=50% />
 
 The colony grid is then found:
