@@ -56,7 +56,7 @@ The script was run:
 
 The image is cut based on a blank:
 
-<img src="examples/blank.jpg" alt="Image of a blank plate" width=50% /> <img src="examples/IMG_3413_0_cut.png" alt="Image of a cropped plate" width=50% />
+<img src="examples/blank.jpg" alt="Image of a blank plate" width=45% /> <img src="examples/IMG_3413_0_cut.png" alt="Image of a cropped plate" width=45% />
 
 The colony grid is then found:
 ![Image of a grid of circles over a plate of colonies](examples/IMG_3413_0_mask.png)
