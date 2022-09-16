@@ -160,7 +160,7 @@ def findColony(cell, rmin, rmax, pad):
     offset = offsets[best]
     
     hili = np.copy(cell)
-    outside = np.ones(cell_gray.shape, np.bool)
+    outside = np.ones(cell_gray.shape, bool)
     outside[ellipse(offset[0], offset[1], r, r)] = 0
     for channel in range(0, 3):
         hili[:, :, channel][outside] = hili[:, :, channel][outside]/2
@@ -174,7 +174,7 @@ def scoreColony(cell, channel, r, offset):
     else:
         cell_single = cell[:, :, channel]
     h, w = cell_single.shape
-    outside = np.ones((h, w), np.bool)
+    outside = np.ones((h, w), bool)
     outside[ellipse(offset[0], offset[1], r, r)] = 0    
 
     bg = np.mean(cell_single[outside])
