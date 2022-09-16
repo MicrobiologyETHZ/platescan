@@ -49,7 +49,7 @@ The program reports for each expected colony:
 ## Example
 Starting with this image:
 
-<img url="examples/IMG_3413.JPG" alt="Image of bacterial colonies growing on a plate" width=48% />
+<img src="examples/IMG_3413.JPG" alt="Image of bacterial colonies growing on a plate" width=48% />
 
 The script was run:
 
