@@ -53,7 +53,7 @@ Starting with this image:
 
 The script was run:
 
-`python platescan2.py examples/IMG_3413.JPG -l examples/layout.txt -b examples/blank.jpg -r 20 -x 110 -y 109 -p 10 --min_r 15 --max_r 40 --edge 200 40 200 40`
+`python platescan.py examples/IMG_3413.JPG -l examples/layout.txt -b examples/blank.jpg -r 20 -x 110 -y 109 -p 10 --min_r 15 --max_r 40 --edge 200 40 200 40`
 
 The image is cut based on a blank:
 
