@@ -48,7 +48,8 @@ The program reports for each expected colony:
 
 ## Example
 Starting with this image:
-![Image of bacterial colonies growing on a plate](examples/IMG_3413.JPG)
+
+<img url="examples/IMG_3413.JPG" alt="Image of bacterial colonies growing on a plate" width=48% />
 
 The script was run:
 
@@ -56,10 +57,12 @@ The script was run:
 
 The image is cut based on a blank:
 
-<img src="examples/blank.jpg" alt="Image of a blank plate" width=45% /> <img src="examples/IMG_3413_0_cut.png" alt="Image of a cropped plate" width=45% />
+<img src="examples/blank.jpg" alt="Image of a blank plate" width=48% /> <img src="examples/IMG_3413_0_cut.png" alt="Image of a cropped plate" width=48% />
 
 The colony grid is then found:
-![Image of a grid of circles over a plate of colonies](examples/IMG_3413_0_mask.png)
+
+<img src="examples/IMG_3413_0_mask.png" alt="Image of a grid of circles over a plate of colonies" width=48% />
 
 Finally the best fit is found for each colony:
-![Image of a plate of colonies with each highlighted within a square cell](examples/IMG_3413_0_hili.png)
+
+<img src="examples/IMG_3413_0_hili.png" alt="Image of a plate of colonies with each highlighted within a square cell" width=48% />
