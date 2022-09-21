@@ -1,7 +1,6 @@
 import argparse, os, scipy
 import numpy as np
 import scipy.signal
-#import matplotlib.pyplot as plt
 from skimage import io, exposure, color
 from skimage.draw import disk, ellipse
 
@@ -255,8 +254,7 @@ def outputResults(results, filename):
     fo.close()
 
 ### MAIN ###
-if True:
-#def __main__():
+def __main__():
     parser = argparse.ArgumentParser(description='Assessing colony growth on arrayed plates.')
 
     parser.add_argument('file', metavar='image_file', help='Image file of colonies arrayed on a plate(s)')
@@ -324,7 +322,5 @@ if True:
         results = formatResults(rowIndex, colIndex, layout, roffsets, coffsets, radii, ccscores, bgs, fgs, bgvars, fgvars)
         outputResults(results, "{}_{}.txt".format(args.output, pid))
 
-    #return()
-
-#if __name__ == "__main__":
-#    __main__()
+if __name__ == "__main__":
+    __main__()
