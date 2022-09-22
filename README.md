@@ -30,7 +30,9 @@ optional arguments:
 ```
 
 ## Method
-The plate image is cropped as follows:
+The pixel intensities of the plate image are first rescaled to be between the 1st and 99th percentile of all intensities to try to homogenize contrast between different images.
+
+The image is then cropped as follows:
   - If a cropped blank plate image is provided it is positioned by cross-correlation and used to crop the image file
   - If no blank is provided, an attempt is made to find the plate edges based on row and column mean pixel intensities
 
