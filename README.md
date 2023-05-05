@@ -1,6 +1,8 @@
 # platescan
 Assessing colony growth on arrayed plates.
 
+[![DOI](https://zenodo.org/badge/211802882.svg)](https://zenodo.org/badge/latestdoi/211802882)
+
 ## How to use
 
 ```
