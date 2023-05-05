@@ -32,7 +32,9 @@ optional arguments:
 ## Requirements
 Platescan was run with the following software versions (it may work for earlier or later versions):
 
-| Python | 3.8.6 |
+| Package | Version |
+| -: | :- |
+| python | 3.8.6 |
 | numpy | 1.19.4 |
 | scipy | 1.5.4 |
 
