@@ -29,6 +29,13 @@ optional arguments:
                         Prefix for output files
 ```
 
+## Requirements
+Platescan was run with the following software versions (it may work for earlier or later versions):
+
+| Python | 3.8.6 |
+| numpy | 1.19.4 |
+| scipy | 1.5.4 |
+
 ## Method
 The pixel intensities of the plate image are first rescaled to be between the 1st and 99th percentile of all intensities to try to homogenize contrast between different images.
 
